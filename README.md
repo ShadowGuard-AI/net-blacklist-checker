@@ -1,3 +1,5 @@
+![Banner](banner.png)
+
 # net-blacklist-checker
 Check an IP address or domain against multiple public blacklists (e.g., Spamhaus, AbuseIPDB) to determine if it's associated with malicious activity. - Focused on Basic network operations
 
