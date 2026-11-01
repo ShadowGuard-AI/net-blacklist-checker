@@ -62,7 +62,7 @@ def is_valid_domain(domain):
     Returns True if valid, False otherwise.
     """
     try:
-        # Basic domain validation (more robust validation might be needed)
+        # Basic domain validation (stricter validation might be needed)
         if not all(c.isalnum() or c in '-.' for c in domain):
             return False
         if domain.startswith('-') or domain.endswith('-'):
