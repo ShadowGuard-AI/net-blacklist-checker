@@ -13,6 +13,8 @@ BLACKLISTS = {
         "domain": "zen.spamhaus.org",
         "query_type": "domain",
     },
+    # The abuseipdb entry does not behave like the others in this dict. It names a web API host,
+    # not a DNS blacklist zone, so the DNS query I build below never gets a real answer from it.
     "abuseipdb": {
         "domain": "check.abuseipdb.com",
         "query_type": "ip",
@@ -65,6 +67,8 @@ def is_valid_domain(domain):
             return False
         if domain.startswith('-') or domain.endswith('-'):
             return False
+        # Validation here doubles as a live DNS lookup, so a domain that is spelled fine but does
+        # not resolve today gets rejected as invalid rather than checked.
         socket.gethostbyname(domain) # Check if DNS can resolve the domain
         return True
     except socket.gaierror:
@@ -78,6 +82,8 @@ def check_blacklist(target, blacklist_name, blacklist_domain, query_type):
     """
     try:
         if query_type == "ip":
+            # The query shape follows the list entry, not the target I was handed. Given a domain
+            # against an ip type list, I reverse its dot separated parts as if they were octets.
             reversed_ip = ".".join(reversed(target.split(".")))
             query = f"{reversed_ip}.{blacklist_domain}"
         elif query_type == "domain":
@@ -86,10 +92,14 @@ def check_blacklist(target, blacklist_name, blacklist_domain, query_type):
             logging.error(f"Invalid query type: {query_type}")
             return False
         
+        # Any answer at all counts as listed for me. I never read the returned address, so I cannot
+        # tell one listing code from another, and a zone that answers for everything looks like a hit.
         socket.gethostbyname(query)
         logging.info(f"{target} found on {blacklist_name} ({blacklist_domain})")
         return True
     except socket.gaierror:
+    # A name error is my only clean signal. A DNS outage lands in this same handler, so a
+    # network problem reads as not listed, and I have no way to separate the two.
         logging.debug(f"{target} not found on {blacklist_name} ({blacklist_domain})") # Debug log, not an error
         return False
     except Exception as e:
@@ -137,6 +147,8 @@ def main():
         except Exception as e:
             logging.error(f"An error occurred while checking {blacklist_name}: {e}")
 
+    # I exit 0 either way. A caller who wants to gate on a listing has to read my printed
+    # lines, because the exit code never carries the verdict.
     if not is_listed:
         logging.info(f"{target} not listed on any checked blacklists.")
     else:
